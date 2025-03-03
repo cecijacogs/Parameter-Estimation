@@ -156,7 +156,7 @@ class TestSimplifiedThreePL(unittest.TestCase):
         trials = np.concatenate([np.concatenate([np.ones(int(rate*100)), np.zeros(100-int(rate*100))]) 
                             for rate in accuracy_rates])
         conditions_repeated = np.repeat(conditions, 100)
-        integration_model = SimplifiedThreePL(MockExperiment(conditions, trials))
+        integration_model = SimplifiedThreePL(MockExperiment(conditions_repeated, trials))
         # fit model on simulated trial data
         integration_model.fit()
         params = [integration_model.get_discrimination(), integration_model.get_base_rate()]
