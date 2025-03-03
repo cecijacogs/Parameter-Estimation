@@ -25,3 +25,66 @@ class TestSimplifiedThreePL(unittest.TestCase):
         self.experiment = MockExperiment(conditions * 10, trials)
         self.model = SimplifiedThreePL(self.experiment)
     
+    def test_initialization(self):
+        # test constructor and error handling
+        self.assertEqual(self.model.experiment, self.experiment)
+        self.assertFalse(self.model._is_fitted)
+        self.assertIsNone(self.model._base_rate)
+        self.assertIsNone(self.model._logit_base_rate)
+        self.assertIsNone(self.model._discrimination)
+        # error handling
+        with self.assertRaises(ValueError):
+            SimplifiedThreePL(None)
+        with self.assertRaises(ValueError):
+            SimplifiedThreePL(MockExperiment([], []))
+        # mismatched lengths
+        with self.assertRaises(ValueError):
+            SimplifiedThreePL(MockExperiment([1.0, 2.0], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]))
+    
+    def test_prediction(self):
+        # test output between 0 and 1 (inclusive)
+        parameters = [1.0, 0.5] # discrimination, base rate
+        predictions = self.model.predict(parameters)
+        self.assertTrue(np.all(predictions >= 0.0) and np.all(predictions <= 1.0))
+
+        # test higher base rate results in higher probabilities
+        pred_low_base = self.model.predict([1.0, 0.2])
+        pred_high_base = self.model.predict([1.0, 0.8])
+        self.assertTrue(np.all(pred_high_base > pred_low_base))
+
+        # test higher difficulty results in lower probabilities
+        pred_low_diff = self.model.predict([1.0, 0.2])
+        unique_conditions = np.unique(self.experiment.conditions) # selects unique condition labels (ex: easy, medium, hard)
+        condition_indices = {c: np.where(np.array(self.experiment.conditions) == c)[0] for c in unique_conditions} # maps condition labels to indices
+        # check that prediction accuracy decrease as difficulty increases
+        for i in range(len(self.experiment.conditions)):
+            easier_cond =unique_conditions[i]
+            harder_cond = unique_conditions[i+1]
+            self.assertGreater(
+                np.mean(pred_low_diff[condition_indices[easier_cond]]),
+                np.mean(pred_low_diff[condition_indices[harder_cond]])
+            )
+        
+        # difficulty affects with negative discrimination (higher accuracy for harder conditions)
+        pred_neg = self.model.predict([-1.0, 0.5])
+        for i in range(4):
+            easier_cond = unique_conditions[i]
+            harder_cond = unique_conditions[i+1]
+            self.assertLess(
+                np.mean(pred_neg[condition_indices[easier_cond]]),
+                np.mean(pred_neg[condition_indices[harder_cond]])
+            )
+        
+        # test known parameter matches expected output
+        test_conditions = np.array([1.0, 0.0, -1.0])
+        test_model = SimplifiedThreePL(MockExperiment(test_conditions, np.array([1, 1, 0])))
+        # apply the prediction formula for correct trials
+        a, c = 1.0, 0.5
+        logit_c = np.log(c / (1-c))  # should be 0 for c=0.5
+        expected_probs = 1 / (1 + np.exp(-a * (test_conditions - logit_c)))
+        actual_probs = test_model.predict([a, c])
+        np.testing.assert_almost_equal(actual_probs, expected_probs)
+
+    def test_parameter_estimation(self):
+    def test_integration(self):
+    def test_corruption(self):
