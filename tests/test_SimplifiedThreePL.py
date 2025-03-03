@@ -176,4 +176,40 @@ class TestSimplifiedThreePL(unittest.TestCase):
     
 
     def test_corruption(self):
-        #
+        # test various corruption scenarios
+        # pulled from chatGPT
+        corruption_scenarios = [
+            # Scenario 1: Just set _is_fitted = True
+            {"setup": lambda m: setattr(m, "_is_fitted", True),
+            "test": lambda m: m.get_discrimination(),
+            "expect": AttributeError},
+            
+            # Scenario 2: Set _discrimination but no _is_fitted
+            {"setup": lambda m: setattr(m, "_discrimination", 2.0),
+            "test": lambda m: m.get_discrimination(),
+            "expect": ValueError},
+            
+            # Scenario 3: Set _is_fitted and _discrimination but no _base_rate
+            {"setup": lambda m: [setattr(m, "_is_fitted", True), setattr(m, "_discrimination", 2.0)],
+            "test": lambda m: m.get_base_rate(),
+            "expect": AttributeError},
+            
+            # Scenario 4: Set _is_fitted and _base_rate but no _discrimination
+            {"setup": lambda m: [setattr(m, "_is_fitted", True), setattr(m, "_base_rate", 0.7)],
+            "test": lambda m: m.get_discrimination(),
+            "expect": AttributeError}
+        ]
+    
+        # run tests
+        for scenario in corruption_scenarios:
+            model = SimplifiedThreePL(self.experiment)
+            setup = scenario["setup"]
+            # set up the model
+            if isinstance(setup, list):
+                for s in setup:
+                    s(model)
+            else:
+                setup(model)
+            # run the test
+            with self.assertRaises(scenario["expect"]):
+                scenario["test"](model)
