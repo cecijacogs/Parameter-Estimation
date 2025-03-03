@@ -86,5 +86,49 @@ class TestSimplifiedThreePL(unittest.TestCase):
         np.testing.assert_almost_equal(actual_probs, expected_probs)
 
     def test_parameter_estimation(self):
+        # test that NLL improves after fitting
+        # NLL = measures how bad the model is at predicting data (opposite of log-likelihood prediction)
+        params = [1.0, 0.5]
+        initial_nll = self.model.negative_log_likelihood(params)
+        # test with fitted model
+        self.model.fit()
+        fitted_params = [self.model._discrimination, self.model._base_rate]
+        fitted_nll = self.model.negative_log_likelihood(fitted_params)
+        self.assertLess(fitted_nll, initial_nll) # nll should decrease (improve) after fitting
+
+        # test that larger discrimination estimate is returned for steeper learning curves
+        # conceptually: steeper learning curve = faster learning = higher discrimination ( easier to distinguish between conditions)
+        conditions = [2.0, 1.0, 0.0, -1.0, -2.0]
+        # low discrimination (flat curve, slower)
+        low_disc_trials = np.array([
+            [0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6],  # 6/10 correct
+            [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5],  # 5/10 correct
+            [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5],  # 5/10 correct
+            [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5],  # 5/10 correct
+            [0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4]   # 4/10 correct
+        ]).flatten().round().astype(int)
+        # high discrimination (steep curve, faster)
+        high_disc_trials = np.array([
+            [0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9],  # 9/10 correct
+            [0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8],  # 8/10 correct
+            [0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7],  # 7/10 correct
+            [0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6],  # 6/10 correct
+            [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]   # 5/10 correct
+        ]).flatten().round().astype(int)
+        # run experiments
+        low_disc_exp = MockExperiment(conditions * 10, low_disc_trials)
+        high_disc_exp = MockExperiment(conditions * 10, high_disc_trials)
+        
+        low_disc_model = SimplifiedThreePL(low_disc_exp)
+        high_disc_model = SimplifiedThreePL(high_disc_exp)
+        
+        low_disc_model.fit()
+        high_disc_model.fit()
+        
+        # Check that the discrimination parameter is higher for steeper curve
+        self.assertGreater(high_disc_model.get_discrimination(), low_disc_model.get_discrimination())
+
     def test_integration(self):
+        #
     def test_corruption(self):
+        #
