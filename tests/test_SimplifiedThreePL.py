@@ -129,6 +129,51 @@ class TestSimplifiedThreePL(unittest.TestCase):
         self.assertGreater(high_disc_model.get_discrimination(), low_disc_model.get_discrimination())
 
     def test_integration(self):
-        #
+        # test that the model can integrate difficulty and accuracy rates across multiple conditions to form a prediction
+        # test param stability after multiple fitting rounds
+        self.model.fit()
+        original_params = [self.model.get_discrimination(), self.model.get_base_rate()]
+
+        # reset and refit 3 times
+        for _ in range(3):
+            # reset params
+            self.model._is_fitted = False
+            self.model._discrimination = None
+            self.model._base_rate = None
+            self.model._logit_base_rate = None
+            #refit
+            self.model.fit()
+            # compare with original
+            current_params = [self.model.get_discrimination(), self.model.get_base_rate()]
+            for i in range(len(original_params)):
+                self.assertAlmostEqual(current_params[i], original_params[i], places=2)
+        
+        # test with different accuracy rates
+        conditions = [2.0, 1.0, 0.0, -1.0, -2.0]
+        accuracy_rates = [0.95, 0.90, 0.75, 0.60, 0.55]
+        # construct experiment
+        # simulate 100 trials for each accuracy rate
+        trials = np.concatenate([np.concatenate([np.ones(int(rate*100)), np.zeros(100-int(rate*100))]) 
+                            for rate in accuracy_rates])
+        conditions_repeated = np.repeat(conditions, 100)
+        integration_model = SimplifiedThreePL(MockExperiment(conditions, trials))
+        # fit model on simulated trial data
+        integration_model.fit()
+        params = [integration_model.get_discrimination(), integration_model.get_base_rate()]
+        predictions = integration_model.predict(params)
+        
+        # predict accuracy rates with the fitted model
+        for i, condition in enumerate(conditions):
+            indices = np.where(conditions_repeated == condition)[0]
+            pred_mean = np.mean(predictions[indices])
+            self.assertAlmostEqual(pred_mean, accuracy_rates[i], places=2)
+        
+        # Verify monotonically decreasing predictions as difficulty increases
+        for i in range(len(conditions)-1):
+            indices_easier = np.where(conditions_repeated == conditions[i])[0]
+            indices_harder = np.where(conditions_repeated == conditions[i+1])[0]
+            self.assertGreater(np.mean(predictions[indices_easier]), np.mean(predictions[indices_harder]))
+    
+
     def test_corruption(self):
         #
