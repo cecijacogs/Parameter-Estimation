@@ -38,7 +38,7 @@ class SimplifiedThreePL:
 
         # cast conditions from a list into an array before performing operations
         conditions = np.array(self.experiment.conditions)
-        return 1 / (1 + np.exp(-discrimination * (self.experiment.conditions - logit_base_rate)))
+        return 1 / (1 + np.exp(-discrimination * (conditions - logit_base_rate)))
     
     def negative_log_likelihood(self, parameters):
         probs = self.predict(parameters)
@@ -57,12 +57,12 @@ class SimplifiedThreePL:
         if not self._is_fitted:
             raise ValueError("Model has not been fitted yet.")
         if self._discrimination is None:
-            raise ValueError("Discrimination parameter is missing.")
+            raise AttributeError("Discrimination parameter is missing.")
         return self._discrimination
     
     def get_base_rate(self):
         if not self._is_fitted:
             raise ValueError("Model has not been fitted yet.")
         if self._base_rate is None:
-            raise ValueError("Base rate parameter is missing.")
+            raise AttributeError("Base rate parameter is missing.")
         return self._base_rate
