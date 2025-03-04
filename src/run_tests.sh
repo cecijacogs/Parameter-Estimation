@@ -1,13 +1,19 @@
 #!/bin/bash
 
-# Navigate to the src directory (if needed)
-cd "$(dirname "$0")/../src" || exit
+# Navigate to the directory of the script to ensure we're in the right folder
+cd "$(dirname "$0")" || exit
 
-# Run the tests using pytest
+# Check if pytest is installed
+if ! command -v pytest &> /dev/null; then
+    echo "Error: pytest is not installed. Please install dependencies first."
+    exit 1
+fi
+
+# Run the tests (point to the tests directory)
 echo "Running tests..."
-pytest
+pytest ../tests --maxfail=1 --disable-warnings -q
 
-# Check the exit status of pytest to determine if tests passed
+# Check if pytest succeeded or failed and exit accordingly
 if [ $? -eq 0 ]; then
     echo "All tests passed!"
     exit 0
